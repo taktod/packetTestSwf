@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300" title="ControlWindow"
+			   creationComplete="init()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.ttProject.library.Logger;
+			private var app:HighQualityMovieTest;
+			protected function init():void {
+				var obj:Object = this.parentApplication;
+				if(obj is HighQualityMovieTest) {
+					app = obj as HighQualityMovieTest;
+				}
+			}
+			protected function startRtmpConnection():void {
+				app.connect();
+			}
+			protected function volumeChange():void {
+				app.player.changeVolume(volumeslider.value);
+			}
+			protected function volumeClick():void {
+				volumeslider.enabled = volume.selected;
+				if(!volumeslider.enabled) {
+					app.player.changeVolume(0);
+				}
+				else {
+					app.player.changeVolume(volumeslider.value);
+				}
+			}
+			protected function logClick():void {
+				app.console.visible = log.selected;
+			}
+		]]>
+	</fx:Script>
+	<s:Label x="10" y="10" text="rtmpServer"/>
+		<s:TextInput x="10" y="30" width="378" id="rtmpUrl"/>
+		<s:Button x="318" y="60" label="connect" click="startRtmpConnection();"/>
+	<s:Label x="10" y="80" text="rtmfpServer"/>
+		<s:TextInput x="10" y="100" width="378" enabled="false" id="rtmfpUrl"/>
+		<s:Button x="318" y="130" label="connect" enabled="false"/>
+	<s:Label x="10" y="150" text="volume"/>
+		<s:CheckBox x="30" y="162" label="on" id="volume" click="volumeClick()" selected="true"/>
+		<s:HSlider x="70" y="167" width="314" minimum="0" maximum="100" value="100" id="volumeslider" changeEnd="volumeChange()"/>
+	<s:Label x="10" y="190" text="other"/>
+		<s:CheckBox x="30" y="202" label="log" id="log" click="logClick()" selected="true"/>
+</s:TitleWindow>
