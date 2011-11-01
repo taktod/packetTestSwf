@@ -53,6 +53,7 @@ package com.ttProject.view
 		private function onNetStatus(event:NetStatusEvent):void
 		{
 			if(event.info.code == "NetConnection.Connect.Success") {
+				Logger.info("connect(null)");
 				// 接続できたら次のステップに進む。
 				setup();
 			}
@@ -60,8 +61,8 @@ package com.ttProject.view
 		private function setup():void {
 			// 接続できたら次のステップに進む。
 			ns = new NetStream(nc);
-			ns.bufferTime = 1;
-			ns.bufferTimeMax = 2;
+			ns.bufferTime = 2;
+			ns.bufferTimeMax = 5;
 			var customClient:Object = new Object();
 			customClient.onMetaData = function(metadata:Object):void {
 				for(var propName:String in metadata) {
@@ -75,6 +76,9 @@ package com.ttProject.view
 				}
 			};
 			ns.client = customClient;
+			ns.addEventListener(NetStatusEvent.NET_STATUS, function(event:NetStatusEvent):void {
+				Logger.info(event.info.code);
+			});
 			soundTransform = new SoundTransform();
 			ns.soundTransform = soundTransform;
 			
@@ -83,10 +87,11 @@ package com.ttProject.view
 		}
 		public function resetup():void {
 			if(status == STATUS_READY) {
-				if(ns == null) {
-					setup();
-				}
+				setup();
 				ns.play(null);
+				video.clear();
+				video.width = 320;
+				video.height = 240;
 				ns.appendBytesAction(NetStreamAppendBytesAction.RESET_BEGIN);
 			}
 		}

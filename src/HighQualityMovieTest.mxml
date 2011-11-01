@@ -8,9 +8,11 @@
 	</fx:Declarations>
 	<fx:Script>
 		<![CDATA[
+			import com.ttProject.controller.RtmfpController;
 			import com.ttProject.controller.RtmpController;
 			import com.ttProject.library.Logger;
 			import com.ttProject.model.AppendDataModel;
+			import com.ttProject.model.FlvDataModel;
 			import com.ttProject.view.AppendPlayerView;
 			
 			import mx.managers.PopUpManager;
@@ -19,7 +21,11 @@
 			public var player:AppendPlayerView;
 			private var controlWindow:ControlWindow;
 			private var rtmpController:RtmpController = null;
+			private var rtmfpController:RtmfpController = null;
+			private var rtmfpDataModel:FlvDataModel = null;
+			private var appendDataModel:AppendDataModel = null;
 			protected function init():void {
+				rtmfpDataModel = new FlvDataModel;
 				Logger.setup(console);
 				var titleWindow:TitleWindow = PopUpManager.createPopUp(this, ControlWindow, false) as TitleWindow;
 				if(titleWindow is ControlWindow) {
@@ -29,26 +35,36 @@
 				Logger.info("start...");
 				player = new AppendPlayerView();
 				player.connect();
+				uiComp.addChild(player.video);
+				appendDataModel = new AppendDataModel(player);
 			}
 			public function connect():void {
 				Logger.info("local player is ready...");
 				try {
-					uiComp.addChild(player.video);
-					var dataModel:AppendDataModel = new AppendDataModel(player);
 					if(rtmpController != null) {
 						// 古いのが残っている場合は再生成しておく。
 						rtmpController.close();
 					}
-					rtmpController = new RtmpController(dataModel);
+					rtmpController = new RtmpController(appendDataModel, rtmfpDataModel);
 					rtmpController.addEventListener(NetStatusEvent.NET_STATUS, function(event:NetStatusEvent):void {
 						Logger.info(event.info.code);
 					});
 					rtmpController.connect(controlWindow.rtmpUrl.text);
 				}
 				catch(e:Error) {
+					Logger.info("here?");
 					Logger.info(e.message);
 					Logger.info(e.getStackTrace());
 				}
+			}
+			public function connectRtmfp():void {
+				if(rtmfpController != null) {
+					Logger.info("rtmfpController is not null, close them....");
+					rtmfpController.close();
+				}
+				rtmfpController = new RtmfpController(controlWindow.rtmfpUrl.text, controlWindow.groupName.text,
+						appendDataModel, rtmfpDataModel);
+				rtmfpController.connect();
 			}
 		]]>
 	</fx:Script>

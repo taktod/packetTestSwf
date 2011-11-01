@@ -19,6 +19,9 @@
 			protected function startRtmpConnection():void {
 				app.connect();
 			}
+			protected function startRtmfpConnection():void {
+				app.connectRtmfp();
+			}
 			protected function volumeChange():void {
 				app.player.changeVolume(volumeslider.value);
 			}
@@ -40,11 +43,13 @@
 		<s:TextInput x="10" y="30" width="378" id="rtmpUrl"/>
 		<s:Button x="318" y="60" label="connect" click="startRtmpConnection();"/>
 	<s:Label x="10" y="80" text="rtmfpServer"/>
-		<s:TextInput x="10" y="100" width="378" enabled="false" id="rtmfpUrl"/>
-		<s:Button x="318" y="130" label="connect" enabled="false"/>
-	<s:Label x="10" y="150" text="volume"/>
-		<s:CheckBox x="30" y="162" label="on" id="volume" click="volumeClick()" selected="true"/>
-		<s:HSlider x="70" y="167" width="314" minimum="0" maximum="100" value="100" id="volumeslider" changeEnd="volumeChange()"/>
-	<s:Label x="10" y="190" text="other"/>
-		<s:CheckBox x="30" y="202" label="log" id="log" click="logClick()" selected="true"/>
+		<s:TextInput x="10" y="100" width="378" id="rtmfpUrl" text="rtmfp://49.212.39.17/test"/>
+		<s:Label x="19" y="130" text="groupName"/>
+			<s:TextInput x="90" y="128" width="220" id="groupName" text="aiueo"/>
+		<s:Button x="318" y="130" label="connect" click="startRtmfpConnection()"/>
+	<s:Label x="12" y="158" text="volume"/>
+		<s:CheckBox x="32" y="170" label="on" id="volume" click="volumeClick()" selected="true"/>
+		<s:HSlider x="72" y="175" width="314" minimum="0" maximum="100" value="100" id="volumeslider" changeEnd="volumeChange()"/>
+	<s:Label x="12" y="198" text="other"/>
+		<s:CheckBox x="32" y="210" label="log" id="log" click="logClick()" selected="true"/>
 </s:TitleWindow>

@@ -12,13 +12,9 @@ package com.ttProject.model
 	 */
 	public class AppendDataModel
 	{
-		/** flvのヘッダ情報 */
-		private var header:ByteArray = null;
-		/** flvのメタ情報(H.264やAACの初期パケットも含む) */
-		private var metaData:Array = null;
 		/** 開始タイムスタンプ時刻 */
-		private var videoStartPosition:int = -1;
-		private var player:AppendPlayerView;
+		private var startPosition:int = -1; // 追記データのタイムスタンプ操作をするためのデータ
+		private var player:AppendPlayerView; // 再生プレーヤービュー
 		/**
 		 * コンストラクタ
 		 */
@@ -29,30 +25,30 @@ package com.ttProject.model
 		/**
 		 * flvヘッダ情報をうけとる。
 		 */
-		public function flvHeader(data:*):void
+		public function flvHeader(data:ByteArray):void
 		{
 			Logger.info("getHeaderMessage");
-			header = makeByteArray(data);
-			metaData = new Array;
 			player.resetup();
-			player.appendBytes(header);
+			player.appendBytes(data);
+			startPosition = -1;
 		}
 		/**
 		 * flvメタデータをうけとる。
 		 */
-		public function flvMetaData(data:*):void
+		public function flvMetaData(data:ByteArray):void
 		{
 			Logger.info("getMetaData");
-			var ba:ByteArray = makeByteArray(data);
-			metaData.push(ba);
-			player.appendBytes(ba);
+			player.appendBytes(data);
 		}
 		/**
 		 * flvデータを受け取る
 		 */
-		public function flvData(data:*):void
+		public function flvData(data:ByteArray):void
 		{
-			player.appendBytes(makeByteArrayWithTimestampInjection(data));
+			var ba:ByteArray = timestampInjection(data);
+			if(ba != null) {
+				player.appendBytes(ba);
+			}
 		}
 		/**
 		 * flvデータの送信完了を取得する。
@@ -61,27 +57,30 @@ package com.ttProject.model
 			player.end();
 		}
 		/**
-		 * 送られてきたデータをByteArrayに変換する。
-		 */
-		private function makeByteArray(data:Array):ByteArray
-		{
-			var ba:ByteArray = new ByteArray;
-			ba.endian = Endian.BIG_ENDIAN;
-			for(var i:int = 0;i < data.length;i ++) {
-				ba.writeByte(data[i]);
-			}
-			ba.position = 0;
-			return ba;
-		}
-		/**
 		 * タイムスタンプをずらしたflv命令を再構成するプログラム
 		 */
-		private function makeByteArrayWithTimestampInjection(data:Array):ByteArray
+		private function timestampInjection(data:ByteArray):ByteArray
 		{
-			var ba:ByteArray = makeByteArray(data);
+			var ba:ByteArray = new ByteArray;
+			ba.writeBytes(data);
 			try {
 				ba.position = 0;
 				var dataType:int = ba.readByte();
+				if(startPosition == -1) {
+					switch(dataType) {
+						case 8:
+							return null;
+						case 18:
+							ba.position = 0;
+							return ba;
+						case 9:
+							ba.position = 11;
+							if(ba.readByte() & 0x10 == 0x00) {
+								return null;
+							}
+							break;
+					}
+				}
 				ba.position = 4;
 				// タイムスタンプを取得する。
 				var timestamp:int = ((ba.readByte() + 0x0100) & 0xFF) * 0x010000
@@ -91,13 +90,13 @@ package com.ttProject.model
 				var newTimestamp:int = 0;
 				switch(dataType) {
 					case 8: // audio情報
-						newTimestamp = timestamp - videoStartPosition;
+						newTimestamp = timestamp - startPosition;
 						break;
 					case 9: // video情報
-						if(videoStartPosition == -1) {
-							videoStartPosition = timestamp;
+						if(startPosition == -1) {
+							startPosition = timestamp;
 						}
-						newTimestamp = timestamp - videoStartPosition;
+						newTimestamp = timestamp - startPosition;
 						break;
 					case 18: // メタ情報
 						ba.position = 0;
@@ -105,7 +104,6 @@ package com.ttProject.model
 					default: // その他
 						return ba;
 				}
-				newTimestamp = newTimestamp / 1.2;
 				ba.position = 4;
 				ba.writeByte((newTimestamp / 0x010000) & 0xFF);
 				ba.writeByte((newTimestamp / 0x0100) & 0xFF);
