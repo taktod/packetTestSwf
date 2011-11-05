@@ -32,6 +32,7 @@ package com.ttProject.view
 		private var video:Video = null;
 		/** 音声制御 */
 		private var soundTransform:SoundTransform;
+		private var soundLevel:Number = 1;
 		/**
 		 * コンストラクタ
 		 */
@@ -83,6 +84,7 @@ package com.ttProject.view
 			});
 			// 音声操作
 			soundTransform = new SoundTransform();
+			soundTransform.volume = soundLevel;
 			ns.soundTransform = soundTransform;
 
 			// ビデオを表示させる
@@ -136,7 +138,8 @@ package com.ttProject.view
 		 * ボリュームを変更する
 		 */
 		public function changeVolume(level:int):void {
-			soundTransform.volume = level / 100;
+			soundLevel = level / 100;
+			soundTransform.volume = soundLevel;
 			ns.soundTransform = soundTransform;
 		}
 		/**
