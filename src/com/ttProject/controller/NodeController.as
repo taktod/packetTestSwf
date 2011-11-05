@@ -52,10 +52,16 @@ package com.ttProject.controller
 			recvStream.client.flvQueue = flvQueue;
 			recvStream.play(netConn.nearID);
 		}
+		public function close():void
+		{
+			sendStream.close();
+			recvStream.close();
+		}
 		/**
 		 * flvHeaderを受信する。
 		 */
-		private function flvHeader(data:*):void {
+		private function flvHeader(data:*):void
+		{
 			if(data is ByteArray) {
 				flvModel.flvHeader(data);
 			}
@@ -63,7 +69,8 @@ package com.ttProject.controller
 		/**
 		 * flvMeta数を受信する。
 		 */
-		private function flvMetaNum(data:*):void {
+		private function flvMetaNum(data:*):void
+		{
 			if(data is int) {
 				flvModel.flvMetaNum(data);
 			}
@@ -71,7 +78,8 @@ package com.ttProject.controller
 		/**
 		 * flvMetaデータを受信する。
 		 */
-		private function flvMetaData(num:*, data:*):void {
+		private function flvMetaData(num:*, data:*):void
+		{
 			if(data is ByteArray) {
 				flvModel.flvMetaData(num, data);
 			}
@@ -79,7 +87,8 @@ package com.ttProject.controller
 		/**
 		 * flvDataを受信する。
 		 */
-		private function flvData(num:*, data:*):void {
+		private function flvData(num:*, data:*):void
+		{
 			if(data is ByteArray) {
 				flvModel.flvData(num, data);
 			}
@@ -87,13 +96,15 @@ package com.ttProject.controller
 		/**
 		 * flv終了フラグを受信する。
 		 */
-		private function flvEnd():void {
+		private function flvEnd():void
+		{
 			flvModel.flvEnd();
 		}
 		/**
 		 * 要求命令を受信する。
 		 */
-		private function flvQueue(order:String):void {
+		private function flvQueue(order:String):void
+		{
 			// 特定の指定を受け取った場合に応答を返す・・・
 			switch(order) {
 				case "flvHeader": // flvHeaderを要求する
@@ -128,6 +139,7 @@ package com.ttProject.controller
 					if(listener != null) {
 						listener(this); // 設置されたリスナーに応答を返す。
 					}
+					break;
 				default: // その他不明な命令
 					break;
 			}
@@ -157,7 +169,8 @@ package com.ttProject.controller
 			sendStream.send("flvQueue", order);
 		}
 		private var listener:Function = null;
-		public function sendFlvConnectQueue(listener:Function):void {
+		public function sendFlvConnectQueue(listener:Function):void
+		{
 			this.listener = listener;
 			sendFlvQueue("flvCheck");
 		}

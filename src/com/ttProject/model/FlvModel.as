@@ -12,7 +12,7 @@ package com.ttProject.model
 	{
 		private var flvDataModel:FlvDataModel; // flvデータを管理する
 		private var appendDataModel:AppendDataModel; // プレーヤーの情報を管理する
-		private var nodeArray:Object; // パケットデータを送信する先リスト
+		private var nodes:Object; // パケットデータを送信する先リスト
 		/**
 		 * コンストラクタ
 		 */
@@ -22,7 +22,7 @@ package com.ttProject.model
 			this.flvDataModel = new FlvDataModel();
 			this.appendDataModel = new AppendDataModel(player);
 			// nodeデータを保持する配列
-			nodeArray = new Object;
+			nodes = new Object;
 		}
 		/**
 		 * flvHeaderを取得したときの動作
@@ -31,8 +31,8 @@ package com.ttProject.model
 		{
 			flvDataModel.setFlvHeader(data);
 			appendDataModel.flvHeader(data);
-			for(var name:String in nodeArray) {
-				var node:NodeController = nodeArray[name] as NodeController;
+			for(var name:String in nodes) {
+				var node:NodeController = nodes[name] as NodeController;
 				if(node != null) {
 					node.sendFlvHeader(data);
 				}
@@ -44,8 +44,8 @@ package com.ttProject.model
 		public function flvMetaNum(num:int):void
 		{
 			flvDataModel.setMetaCount(num);
-			for(var name:String in nodeArray) {
-				var node:NodeController = nodeArray[name] as NodeController;
+			for(var name:String in nodes) {
+				var node:NodeController = nodes[name] as NodeController;
 				if(node != null) {
 					node.sendFlvMetaNum(num);
 				}
@@ -58,8 +58,8 @@ package com.ttProject.model
 		{
 			flvDataModel.setMetaData(num, data);
 			appendDataModel.flvMetaData(data);
-			for(var name:String in nodeArray) {
-				var node:NodeController = nodeArray[name] as NodeController;
+			for(var name:String in nodes) {
+				var node:NodeController = nodes[name] as NodeController;
 				if(node != null) {
 					node.sendFlvMetaData(num, data);
 				}
@@ -71,8 +71,8 @@ package com.ttProject.model
 		public function flvData(num:Number, data:ByteArray):void
 		{
 //			flvDataModel.setFlvData(num, data); // いまのところためる必要はない。
-			for(var name:String in nodeArray) {
-				var node:NodeController = nodeArray[name] as NodeController;
+			for(var name:String in nodes) {
+				var node:NodeController = nodes[name] as NodeController;
 				if(node != null) {
 					node.sendFlvData(num, data);
 				}
@@ -86,8 +86,9 @@ package com.ttProject.model
 		 */
 		public function flvEnd():void
 		{
-			for(var name:String in nodeArray) {
-				var node:NodeController = nodeArray[name] as NodeController;
+			flvDataModel.clear();
+			for(var name:String in nodes) {
+				var node:NodeController = nodes[name] as NodeController;
 				if(node != null) {
 					node.sendFlvEnd();
 				}
@@ -99,14 +100,14 @@ package com.ttProject.model
 		 */
 		public function addNode(nodeController:NodeController):void
 		{
-			nodeArray[nodeController.getNodeID()] = nodeController;
+			nodes[nodeController.getNodeID()] = nodeController;
 		}
 		/**
 		 * 処理ノードを削除
 		 */
 		public function removeNode(nodeController:NodeController):void
 		{
-			nodeArray[nodeController.getNodeID()] = null;
+			delete nodes[nodeController.getNodeID()];
 		}
 		/**
 		 * flvDataModelを応答

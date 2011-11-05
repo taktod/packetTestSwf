@@ -48,10 +48,25 @@
 			public function connectRtmp():void {
 				if(rtmpController != null) {
 					// 古いのが残っている場合は再生成しておく。
+					flvModel.flvEnd();
 					rtmpController.close();
+				}
+				if(rtmfpController != null) {
+					rtmfpController.stopAllNodeFlvDownload();
 				}
 				rtmpController = new RtmpController(flvModel);
 				rtmpController.connect(controlWindow.rtmpUrl.text);
+			}
+			/**
+			 * rtmpの切断
+			 */
+			public function disconnectRtmp():void {
+				if(rtmpController != null) {
+					// 古いのが残っている場合は再生成しておく。
+					flvModel.flvEnd();
+					rtmpController.close();
+					rtmpController = null;
+				}
 			}
 			/**
 			 * rtmfpの接続

@@ -94,6 +94,9 @@ package com.ttProject.view
 		 */
 		public function resetup():void {
 			if(status == STATUS_READY) {
+				if(ns != null) {
+					ns.close();
+				}
 				setup();
 				ns.play(null);
 				video.clear();
@@ -118,8 +121,12 @@ package com.ttProject.view
 				ns.addEventListener(NetStatusEvent.NET_STATUS, function(event:NetStatusEvent):void {
 					if(event.info.code == "NetStream.Buffer.Empty") {
 						// データ送信の完了をうけたあとにBufferが空になったら、再生が終わったものとする。
-						video.clear();
-						ns.close();
+						if(video != null) {
+							video.clear();
+						}
+						if(ns != null) {
+							ns.close();
+						}
 						ns = null;
 					}
 				});

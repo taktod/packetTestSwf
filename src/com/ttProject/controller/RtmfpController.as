@@ -57,6 +57,7 @@ package com.ttProject.controller
 		 */
 		private function onNetStatusEvent(event:NetStatusEvent):void
 		{
+			Logger.info(event.info.code, this);
 			switch(event.info.code) {
 			case "NetConnection.Connect.Success":
 				onNetConnected();
@@ -65,6 +66,9 @@ package com.ttProject.controller
 				break;
 			case "NetGroup.Neighbor.Connect":
 				onNeighborConnected(event.info.peerID);
+				break;
+			case "NetGroup.Neighbor.Disconnect":
+				onNeighborDisconnected(event.info.peerID);
 				break;
 			case "NetGroup.SendTo.Notify":
 				Logger.info(event.info.message);
@@ -76,10 +80,25 @@ package com.ttProject.controller
 		public function onNeighborConnected(peerID:String):void {
 			nodes[peerID] = new NodeController(peerID, netConn, flvModel);
 		}
+		public function onNeighborDisconnected(peerID:String):void {
+			Logger.info(peerID + "is disconnected...");
+			// このPeerIDの接続とのNodeControllerは削除すべき。
+			Logger.info("before...");
+			var node:NodeController = nodes[peerID] as NodeController;
+			if(node != null) {
+				// flvの送信先になっている場合は解除する。
+				flvModel.removeNode(node);
+				// nodeコントローラーそのものを停止する。
+				node.close();
+			}
+			delete nodes[peerID];
+		}
 		private var connected:Boolean;
 		public function test():void {
 			Logger.info("try to send test now...");
 			connected = false;
+			// いままでに接続しているNodeがある場合はすべて解除する必要がある。
+			stopAllNodeFlvDownload();
 			// 全Nodeに対してデータを送信する。
 			for(var peerID:String in nodes)
 			{
@@ -93,6 +112,15 @@ package com.ttProject.controller
 							node.sendFlvQueue("flvData");
 						}
 					});
+				}
+			}
+		}
+		public function stopAllNodeFlvDownload():void
+		{
+			for(var peerID:String in nodes) {
+				if(nodes[peerID] != null) {
+					// すべての接続に対してこれ以上命令は必要ないと送信する。(flvパケットが飛んでくるのをやめることができる。)
+					(nodes[peerID] as NodeController).sendFlvQueue("flvEnd");
 				}
 			}
 		}
