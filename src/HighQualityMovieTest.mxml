@@ -13,58 +13,62 @@
 			import com.ttProject.library.Logger;
 			import com.ttProject.model.AppendDataModel;
 			import com.ttProject.model.FlvDataModel;
+			import com.ttProject.model.FlvModel;
 			import com.ttProject.view.AppendPlayerView;
 			
 			import mx.managers.PopUpManager;
 			
 			import spark.components.TitleWindow;
-			public var player:AppendPlayerView;
+			
 			private var controlWindow:ControlWindow;
+			public var player:AppendPlayerView; // ボリューム変更をControlWindowで実行するためにpublicである必要あり
 			private var rtmpController:RtmpController = null;
 			private var rtmfpController:RtmfpController = null;
-			private var rtmfpDataModel:FlvDataModel = null;
-			private var appendDataModel:AppendDataModel = null;
+			private var flvModel:FlvModel = null;
+			/**
+			 * 初期化
+			 */
 			protected function init():void {
-				rtmfpDataModel = new FlvDataModel;
-				Logger.setup(console);
+				Logger.setup(console, Logger.INFO);
+				// コントロールウィンドウ作成
 				var titleWindow:TitleWindow = PopUpManager.createPopUp(this, ControlWindow, false) as TitleWindow;
 				if(titleWindow is ControlWindow) {
 					controlWindow = titleWindow as ControlWindow;
 				}
 				PopUpManager.centerPopUp(controlWindow);
-				Logger.info("start...");
+				// プレーヤーの準備
 				player = new AppendPlayerView();
-				player.connect();
-				uiComp.addChild(player.video);
-				appendDataModel = new AppendDataModel(player);
+				uiComp.addChild(player.getVideo());
+				// データモデルの準備
+				flvModel = new FlvModel(player);
 			}
-			public function connect():void {
-				Logger.info("local player is ready...");
-				try {
-					if(rtmpController != null) {
-						// 古いのが残っている場合は再生成しておく。
-						rtmpController.close();
-					}
-					rtmpController = new RtmpController(appendDataModel, rtmfpDataModel);
-					rtmpController.addEventListener(NetStatusEvent.NET_STATUS, function(event:NetStatusEvent):void {
-						Logger.info(event.info.code);
-					});
-					rtmpController.connect(controlWindow.rtmpUrl.text);
+			/**
+			 * rtmpの接続
+			 */
+			public function connectRtmp():void {
+				if(rtmpController != null) {
+					// 古いのが残っている場合は再生成しておく。
+					rtmpController.close();
 				}
-				catch(e:Error) {
-					Logger.info("here?");
-					Logger.info(e.message);
-					Logger.info(e.getStackTrace());
-				}
+				rtmpController = new RtmpController(flvModel);
+				rtmpController.connect(controlWindow.rtmpUrl.text);
 			}
+			/**
+			 * rtmfpの接続
+			 */
 			public function connectRtmfp():void {
 				if(rtmfpController != null) {
 					Logger.info("rtmfpController is not null, close them....");
 					rtmfpController.close();
 				}
-				rtmfpController = new RtmfpController(controlWindow.rtmfpUrl.text, controlWindow.groupName.text,
-						appendDataModel, rtmfpDataModel);
-				rtmfpController.connect();
+				rtmfpController = new RtmfpController(flvModel);
+				rtmfpController.connect(controlWindow.rtmfpUrl.text, controlWindow.groupName.text);
+			}
+			/**
+			 * テストイベントキック
+			 */
+			public function test():void {
+				rtmfpController.test();
 			}
 		]]>
 	</fx:Script>

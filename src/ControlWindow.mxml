@@ -10,21 +10,36 @@
 		<![CDATA[
 			import com.ttProject.library.Logger;
 			private var app:HighQualityMovieTest;
+			/**
+			 * 初期化
+			 */
 			protected function init():void {
 				var obj:Object = this.parentApplication;
 				if(obj is HighQualityMovieTest) {
 					app = obj as HighQualityMovieTest;
 				}
 			}
+			/**
+			 * rtmp接続開始命令
+			 */
 			protected function startRtmpConnection():void {
-				app.connect();
+				app.connectRtmp();
 			}
+			/**
+			 * rtmfp接続開始命令
+			 */
 			protected function startRtmfpConnection():void {
 				app.connectRtmfp();
 			}
+			/**
+			 * ボリューム変更命令
+			 */
 			protected function volumeChange():void {
 				app.player.changeVolume(volumeslider.value);
 			}
+			/**
+			 * ボリュームON/OFFクリック時動作
+			 */
 			protected function volumeClick():void {
 				volumeslider.enabled = volume.selected;
 				if(!volumeslider.enabled) {
@@ -34,8 +49,17 @@
 					app.player.changeVolume(volumeslider.value);
 				}
 			}
+			/**
+			 * ログON/OFFクリック時動作
+			 */
 			protected function logClick():void {
 				app.console.visible = log.selected;
+			}
+			/**
+			 * テストボタンクリック時動作
+			 */
+			protected function test():void {
+				app.test();
 			}
 		]]>
 	</fx:Script>
@@ -52,4 +76,5 @@
 		<s:HSlider x="72" y="175" width="314" minimum="0" maximum="100" value="100" id="volumeslider" changeEnd="volumeChange()"/>
 	<s:Label x="12" y="198" text="other"/>
 		<s:CheckBox x="32" y="210" label="log" id="log" click="logClick()" selected="true"/>
+		<s:Button x="223" y="210" label="Button" click="test()"/>
 </s:TitleWindow>

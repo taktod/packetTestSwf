@@ -11,7 +11,6 @@ package com.ttProject.model
 	public class FlvDataModel
 	{
 		// クラスの中にうめこんでもっていると、複数のnetGroupにまたがっているときに動作がうまくいかないのでなんとかしておく。
-		private var netGroupArray:Array; // 所属NetGroup
 		private var flvHeader:ByteArray; // flvHeader情報
 		private var metaCount:int; // メタ情報数
 		private var metaDataArray:Array; // メタデータ情報
@@ -19,44 +18,12 @@ package com.ttProject.model
 
 		private var dataStartPos:Number; // データ保持インデックスの頭
 		private var loadingPos:Number; // ローディング中のデータ位置
-		private var waitingPos:Number; // データ未要求のデータ位置
 		/**
 		 * コンストラクタ
 		 */
 		public function FlvDataModel()
 		{
-			netGroupArray = new Array();
 			clear();
-		}
-		/**
-		 * やらないといけないステータスは
-		 * ヘッダ情報とメタ数の取得
-		 * メタ情報のダウンロード
-		 * パケットデータの受信
-		 * 
-		 * データはすべて即共有可能にする必要がある。
-		 * パケットデータはある程度たまったら共有からはずしてもよい。(メモリーエラー対策)
-		 * 
-		 * まずは古いデータを消すことを考えずにDownload共有について考慮しておく。
-		 */
-		public function getRequestedData(index:Number):* {
-			if(index == 0) {
-				Logger.info(loadingPos); // ここがNanになる。
-				return loadingPos; // 現在の再生ポス応答
-			}
-			else if(index == 1) {
-				return flvHeader; // flvHeader応答
-			}
-			else if(index == 2) {
-				return metaCount; // メタデータの数応答
-			}
-			else if(index >= 3 && index < 3 + metaDataArray.length) {
-				return metaDataArray[index - 3]; // メタデータ応答
-			}
-			else if(index >= dataStartPos && index < loadingPos) {
-				return dataArray[index - dataStartPos]; // フレームデータ応答
-			}
-			return null; // nullの場合は存在しないので、このデータの受信を拒否する。
 		}
 		/**
 		 * すべてのデータを消去する。(netGroupは破棄しない。)
@@ -68,7 +35,6 @@ package com.ttProject.model
 			metaDataArray = new Array();
 			dataArray = new Array();
 			loadingPos = 0;
-			waitingPos = 0;
 			dataStartPos = 0;
 		}
 		/**
@@ -95,9 +61,6 @@ package com.ttProject.model
 					dataArray.push(null);
 				}
 				dataArray.reverse();
-				// netGroupにデータ要求を書き込まないとだめ。
-				// 巻き戻した分は、保持リストにあるわけないので、WantObjectにしておく。
-				addWantObjects(position, dataStartPos - 1);
 			}
 			else {
 				// 現行より後に移る場合
@@ -106,9 +69,6 @@ package com.ttProject.model
 					dataArray.pop();
 				}
 				dataArray.reverse();
-				// netGroupにデータ要求を書き込まないとだめ。
-				// すすめた分は保持リストから取り去る
-				removeHaveObjects(dataStartPos, position - 1);
 			}
 			dataStartPos = position;
 		}
@@ -119,10 +79,6 @@ package com.ttProject.model
 		{
 			flvHeader = new ByteArray();
 			flvHeader.writeBytes(data);
-			// netGroupの要求queueから1番をはずす。
-			removeWantObjects(1, 1);
-			// もってるよオブジェクトに追加
-			addHaveObjects(1, 1);
 		}
 		/**
 		 * メタデータ数を設置する。
@@ -131,16 +87,6 @@ package com.ttProject.model
 		{
 			Logger.info("getMetaCount:" + count);
 			metaCount = count;
-			// データ保持のはじめの位置を取得する。
-			// netGroupの要求queueから1番をはずす。
-			removeWantObjects(2, 2);
-			// もってるよオブジェクトに追加
-			addHaveObjects(2, 2);
-			// 要求Queueにメタデータを追加する。
-			addWantObjects(3, 3 + count);
-		}
-		public function getMetaCount():int {
-			return metaCount;
 		}
 		/**
 		 * メタデータを設置する。
@@ -154,21 +100,7 @@ package com.ttProject.model
 			}
 			var ba:ByteArray = new ByteArray();
 			ba.writeBytes(data);
-			metaDataArray[index - 3] = ba;
-			// netGroupの要求queueから1番をはずす。
-			removeWantObjects(index, index);
-			// もってるよオブジェクトに追加
-			addHaveObjects(index, index);
-		}
-		public function wantPlayPosition():void {
-			try {
-				// 再生ポジションを問い合わせる。
-				removeHaveObjects(0, 0);
-				addWantObjects(0, 0);
-			}
-			catch(e:Error) {
-				Logger.info(e.toString());
-			}
+			metaDataArray[index] = ba;
 		}
 		public function isReadyToPlay():Boolean {
 			// flvヘッダ情報は取得済みか？
@@ -185,22 +117,11 @@ package com.ttProject.model
 					counter ++;
 				}
 			}
-			if(counter == metaCount) {
-				// 開始場所をセットする。
-				removeWantObjects(0, 0);
-				addHaveObjects(0, 0);
-				return true;
-			}
-			else {
-				return false;
-			}
+			return counter == metaCount;
 		}
 		public function setPlayPosition(pos:Number):void {
 			// 開始場所決定
 			dataStartPos = pos;
-			// waitingPosは現状意味をなさない。すべてのObjectを要求させることにする。
-			addWantObjects(pos, 9007199254740990);
-			waitingPos = 9007199254740990;
 			loadingPos = pos;
 		}
 		/**
@@ -214,104 +135,30 @@ package com.ttProject.model
 			var ba:ByteArray = new ByteArray();
 			ba.writeBytes(data);
 			dataArray[index - dataStartPos] = ba;
-			// netGroupの要求queueから1番をはずす。
-			removeWantObjects(index, index);
-			// もってるよオブジェクトに追加
-			addHaveObjects(index, index);
 			// 再生ポイントを更新する。(本当は連番できているか確認する必要があるが、とりあえずはぶいておく。)
 			if(loadingPos < index) {
 				loadingPos = index;
 			}
 		}
 		
-		// 以下ネットグループの管理
-		/**
-		 * 処理ネットグループを追加
-		 * (あとから追加された場合は、必要なwantObject、haveObjectをつけてやらないとだめ。)
-		 */
-		public function addNetGroup(netGroup:NetGroup):void {
-			var i:int;
-			var empty:int = -1;
-			for(i = 0;i < netGroupArray.length;i ++) {
-				if(netGroupArray[i] === netGroup) { // すでに登録済みならそのままおわる。
-					return;
-				}
-				if(netGroupArray[i] == null && empty == -1) {
-					empty = i;
-				}
-			}
-			setupObjectState(netGroup); // オブジェクトの状態を設定しておく
-			if(empty == -1) {
-				netGroupArray.push(netGroup);
-			}
-			else {
-				netGroupArray[empty] = netGroup;
-			}
-		}
-		/**
-		 * 処理ネットグループを削除
-		 */
-		public function removeNetGroup(netGroup:NetGroup):void {
-			var i:int;
-			for(i = 0;i < netGroupArray.length;i ++) {
-				if(netGroupArray[i] === netGroup) {
-					// そんなに増えないだろうということを顧慮して、単にnullにするだけにしておく。
-					netGroupArray[i] = null;
-				}
-			}
-		}
-		private function setupObjectState(netGroup:NetGroup):void
+		public function getFlvHeader():ByteArray
 		{
-			// flvHeaderの取得済みか？
-			if(flvHeader == null) {
-				addWantObjects(1,2); // flvHeaderとMetaDataの数を要求する状態にしておく。
-				return;
-			}
-			else {
-				addHaveObjects(1,1);
-			}
-			// メタ数は取得済みか？
-			if(metaCount == 0) {
-				addWantObjects(2,2);
-				return;
-			}
-			else {
-				addHaveObjects(2,2);
-			}
-			// メタ情報は取得済みか？
-			for(var i:int = 0;i < metaDataArray.length && i < metaCount;i ++) {
-				if(metaDataArray is ByteArray) {
-					addHaveObjects(3+i, 3+i);
-				}
-				else {
-					addWantObjects(3+i, 3+i);
-				}
-			}
-			// 再生オブジェクトは管理外にしておく。(グループに属してから追加されたデータに適応される・・・といった感じ)
+			return flvHeader;
 		}
-		private function addHaveObjects(start:Number, end:Number):void
+		public function getMetaCount():int
 		{
-			for(var i:int = 0;i < netGroupArray.length;i ++) {
-				(netGroupArray[i] as NetGroup).addHaveObjects(start, end);
-			}
+			return metaCount;
 		}
-		private function addWantObjects(start:Number, end:Number):void
+		public function getMetaData():Array
 		{
-			for(var i:int = 0;i < netGroupArray.length;i ++) {
-				(netGroupArray[i] as NetGroup).addWantObjects(start, end);
-			}
+			return metaDataArray;
 		}
-		private function removeHaveObjects(start:Number, end:Number):void
+		public function getFlvData(index:Number):ByteArray
 		{
-			for(var i:int = 0;i < netGroupArray.length;i ++) {
-				(netGroupArray[i] as NetGroup).removeHaveObjects(start, end);
+			if(index < dataStartPos) {
+				return null;
 			}
-		}
-		private function removeWantObjects(start:Number, end:Number):void
-		{
-			for(var i:int = 0;i < netGroupArray.length;i ++) {
-				(netGroupArray[i] as NetGroup).removeWantObjects(start, end);
-			}
+			return dataArray[index - dataStartPos] as ByteArray;
 		}
 	}
 }

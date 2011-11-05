@@ -29,8 +29,7 @@ package com.ttProject.view
 		/** ネットストリーム */
 		private var ns:NetStream = null;
 		/** 表示先ビデオオブジェクト */
-		private var _video:Video = null;
-		public function get video():Video {return this._video;};
+		private var video:Video = null;
 		/** 音声制御 */
 		private var soundTransform:SoundTransform;
 		/**
@@ -38,13 +37,10 @@ package com.ttProject.view
 		 */
 		public function AppendPlayerView()
 		{
-			// ここでプレーヤーの下地をつくってしまう。
 			status = STATUS_INIT;
-			nc = new NetConnection;
+			nc = new NetConnection();
 			nc.addEventListener(NetStatusEvent.NET_STATUS, onNetStatus);
-			_video = new Video(); // videoのサイズはあとで適宜変更しなければいけない。MetaDataによる？
-		}
-		public function connect():void {
+			video = new Video(); // videoのサイズはあとで適宜変更しなければいけない。MetaDataによる？
 			nc.connect(null);
 		}
 		/**
@@ -53,20 +49,21 @@ package com.ttProject.view
 		private function onNetStatus(event:NetStatusEvent):void
 		{
 			if(event.info.code == "NetConnection.Connect.Success") {
-				Logger.info("connect(null)");
 				// 接続できたら次のステップに進む。
+				Logger.info("Connect.Success..", this);
 				setup();
 			}
 		}
 		private function setup():void {
-			// 接続できたら次のステップに進む。
+			// 再生用のNetStreamを作成
 			ns = new NetStream(nc);
 			ns.bufferTime = 2;
 			ns.bufferTimeMax = 5;
+			// メタ情報の取得動作をさせる。
 			var customClient:Object = new Object();
 			customClient.onMetaData = function(metadata:Object):void {
 				for(var propName:String in metadata) {
-					Logger.info(propName + ":" + metadata[propName]);
+					Logger.info(propName + ":" + metadata[propName], this);
 					if(propName == "width") {
 						video.width = metadata[propName];
 					}
@@ -76,15 +73,25 @@ package com.ttProject.view
 				}
 			};
 			ns.client = customClient;
+			// イベント取得(取り立てて必要はないが動作をみたい。)
 			ns.addEventListener(NetStatusEvent.NET_STATUS, function(event:NetStatusEvent):void {
 				Logger.info(event.info.code);
+				Logger.info(ns.bytesLoaded);
+				Logger.info(ns.bytesTotal);
+				Logger.info(ns.decodedFrames);
+				Logger.info(ns.liveDelay);
 			});
+			// 音声操作
 			soundTransform = new SoundTransform();
 			ns.soundTransform = soundTransform;
-			
-			_video.attachNetStream(ns);
+
+			// ビデオを表示させる
+			video.attachNetStream(ns);
 			status = STATUS_READY;
 		}
+		/**
+		 * 再生成
+		 */
 		public function resetup():void {
 			if(status == STATUS_READY) {
 				setup();
@@ -95,26 +102,42 @@ package com.ttProject.view
 				ns.appendBytesAction(NetStreamAppendBytesAction.RESET_BEGIN);
 			}
 		}
+		/**
+		 * byteデータ追記
+		 */
 		public function appendBytes(data:ByteArray):void {
 			if(status == STATUS_READY) {
 				ns.appendBytes(data);
 			}
 		}
+		/**
+		 * 完了イベント
+		 */
 		public function end():void {
 			if(status == STATUS_READY) {
 				ns.addEventListener(NetStatusEvent.NET_STATUS, function(event:NetStatusEvent):void {
 					if(event.info.code == "NetStream.Buffer.Empty") {
-						// 終了イベント
-						_video.clear();
+						// データ送信の完了をうけたあとにBufferが空になったら、再生が終わったものとする。
+						video.clear();
 						ns.close();
 						ns = null;
 					}
 				});
 			}
 		}
+		/**
+		 * ボリュームを変更する
+		 */
 		public function changeVolume(level:int):void {
 			soundTransform.volume = level / 100;
 			ns.soundTransform = soundTransform;
+		}
+		/**
+		 * ビデオオブジェクト取得
+		 */
+		public function getVideo():Video
+		{
+			return this.video;
 		}
 	}
 }

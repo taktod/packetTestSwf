@@ -3,6 +3,7 @@ package com.ttProject.controller
 	import com.ttProject.library.Logger;
 	import com.ttProject.model.AppendDataModel;
 	import com.ttProject.model.FlvDataModel;
+	import com.ttProject.model.FlvModel;
 	
 	import flash.events.NetStatusEvent;
 	import flash.net.NetConnection;
@@ -15,16 +16,14 @@ package com.ttProject.controller
 	public class RtmpController extends NetConnection
 	{
 		/** データ操作モデル */
-		private var appendDataModel:AppendDataModel;
-		private var flvDataModel:FlvDataModel;
+		private var flvModel:FlvModel = null;
 		/**
 		 * コンストラクタ
 		 */
-		public function RtmpController(appendDataModel:AppendDataModel, flvDataModel:FlvDataModel)
+		public function RtmpController(flvModel:FlvModel)
 		{
 			super();
-			this.appendDataModel = appendDataModel;
-			this.flvDataModel = flvDataModel;
+			this.flvModel = flvModel;
 		}
 		/**
 		 * header情報取得
@@ -32,8 +31,7 @@ package com.ttProject.controller
 		public function flvHeader(data:*):void
 		{
 			var ba:ByteArray = makeByteArray(data);
-			flvDataModel.setFlvHeader(ba);
-			appendDataModel.flvHeader(ba);
+			flvModel.flvHeader(ba);
 		}
 		/**
 		 * メタデータの数
@@ -41,7 +39,7 @@ package com.ttProject.controller
 		public function flvMetaNum(data:*):void
 		{
 			Logger.info("metaDataNum:" + data);
-			flvDataModel.setMetaCount(data);
+			flvModel.flvMetaNum(data);
 		}
 		/**
 		 * meta情報取得
@@ -49,8 +47,7 @@ package com.ttProject.controller
 		public function flvMetaData(num:*, data:*):void
 		{
 			var ba:ByteArray = makeByteArray(data);
-			flvDataModel.setMetaData(num + 3, ba); // フレーム位置を絶対位置に変更する必要があるので3たした。
-			appendDataModel.flvMetaData(ba);
+			flvModel.flvMetaData(num, ba);
 		}
 		private var counter:int = 0;
 		private var startTime:Number;
@@ -58,26 +55,14 @@ package com.ttProject.controller
 		 * flvデータ取得
 		 */
 		public function flvData(num:*, data:*):void {
-//			counter ++;
-//			if(counter == 10) {
-//				startTime = new Date().time;
-//			}
-//			else if(counter == 1010) {
-//				Logger.info("bench:" + (1000 / (new Date().time - startTime)));
-//			}
-			// 0.0757346258709482
-			// 0.07166403898523721
 			var ba:ByteArray = makeByteArray(data);
-			flvDataModel.setFlvData(num + 3 + flvDataModel.getMetaCount(), ba);
-			if(flvDataModel.isReadyToPlay()) { // Metaデータの送信がおわるまでビデオデータを送信しない。
-				appendDataModel.flvData(ba);
-			}
+			flvModel.flvData(num, ba);
 		}
 		/**
 		 * flv完了通知
 		 */
 		public function flvEnd():void {
-			appendDataModel.flvEnd();
+			flvModel.flvEnd();
 		}
 		/**
 		 * 受け取った数値配列オブジェクトをByteArrayに変換する
