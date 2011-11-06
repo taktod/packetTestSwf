@@ -65,12 +65,18 @@ package com.ttProject.model
 				}
 			}
 		}
+		public function test(data:ByteArray):Array
+		{
+			var result:Array = new Array;
+			result[0] = data;
+			return result;
+		}
 		/**
 		 * flvDataを受け取ったときの動作
 		 */
 		public function flvData(num:Number, data:ByteArray):void
 		{
-//			flvDataModel.setFlvData(num, data); // いまのところためる必要はない。
+			// データをうけとったときに順番がずれた場合に対処する必要あり。
 			for(var name:String in nodes) {
 				var node:NodeController = nodes[name] as NodeController;
 				if(node != null) {
@@ -78,7 +84,13 @@ package com.ttProject.model
 				}
 			}
 			if(flvDataModel.isReadyToPlay()) {
-				appendDataModel.flvData(data);
+				// 受け取ったデータをいったん順番に合わせる。(ためしたことはない。)
+				var dataArray:Array = flvDataModel.setFlvData(num, data);
+				if(dataArray != null) {
+					for(var i:int = 0;i < dataArray.length;i ++) {
+						appendDataModel.flvData(dataArray[0]);
+					}
+				}
 			}
 		}
 		/**
@@ -86,6 +98,7 @@ package com.ttProject.model
 		 */
 		public function flvEnd():void
 		{
+			// モデルをクリアすることで、ほかのnodeから要求がきても動作しなくなる。
 			flvDataModel.clear();
 			for(var name:String in nodes) {
 				var node:NodeController = nodes[name] as NodeController;
@@ -110,11 +123,42 @@ package com.ttProject.model
 			delete nodes[nodeController.getNodeID()];
 		}
 		/**
+		 * 準備がおわっているか確認
+		 */
+		public function isReadyToPlay():Boolean
+		{
+			if(flvDataModel == null) {
+				return false;
+			}
+			return flvDataModel.isReadyToPlay();
+		}
+		public function getFlvHeader():ByteArray
+		{
+			if(flvDataModel == null) {
+				return null;
+			}
+			return flvDataModel.getFlvHeader();
+		}
+		public function getFlvMetaNum():int
+		{
+			if(flvDataModel == null) {
+				return 0;
+			}
+			return flvDataModel.getMetaCount();
+		}
+		public function getFlvMetaData(num:int):ByteArray
+		{
+			if(flvDataModel == null) {
+				return null;
+			}
+			return flvDataModel.getMetaData()[num];
+		}
+		/**
 		 * flvDataModelを応答
 		 */
-		public function getFlvDataModel():FlvDataModel
-		{
-			return flvDataModel;
-		}
+//		public function getFlvDataModel():FlvDataModel
+//		{
+//			return flvDataModel;
+//		}
 	}
 }

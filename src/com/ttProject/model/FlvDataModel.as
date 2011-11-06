@@ -14,10 +14,9 @@ package com.ttProject.model
 		private var flvHeader:ByteArray; // flvHeader情報
 		private var metaCount:int; // メタ情報数
 		private var metaDataArray:Array; // メタデータ情報
-		private var dataArray:Array; // 保持データ
 
-		private var dataStartPos:Number; // データ保持インデックスの頭
-		private var loadingPos:Number; // ローディング中のデータ位置
+		private var skipDataModel:SkipDataModel = null;
+		private var nextPosition:Number;
 		/**
 		 * コンストラクタ
 		 */
@@ -26,57 +25,22 @@ package com.ttProject.model
 			clear();
 		}
 		/**
-		 * すべてのデータを消去する。(netGroupは破棄しない。)
+		 * すべてのデータを消去する。
 		 */
 		public function clear():void
 		{
 			flvHeader = null;
 			metaCount = 0;
 			metaDataArray = new Array();
-			dataArray = new Array();
-			loadingPos = 0;
-			dataStartPos = 0;
-		}
-		/**
-		 * 保持flvデータの位置を変更する。
-		 */
-		public function setTaskPos(position:Number):void
-		{
-			// 新ポジション以前のところにあることになるデータを削除しなくてはならない。
-			var i:int;
-			/**
-			 * 10 11 12 13 14 15 16
-			 * 旧          新
-			 * だとすると10から13までの配列データをshiftしないといけない。
-			 * 
-			 * 10 11 12 13 14 15 16
-			 *    新           旧
-			 * だとすると11から14まで、配列をいれる部分をつくらないといけない。
-			 */
-			if(position < dataStartPos) {
-				// 現行よりうしろに巻き戻される場合
-				dataArray.reverse();
-				// 個数分先頭に追加
-				for(i = 0;i < dataStartPos - position;i ++) {
-					dataArray.push(null);
-				}
-				dataArray.reverse();
-			}
-			else {
-				// 現行より後に移る場合
-				dataArray.reverse();
-				for(i = 0;i < position - dataStartPos;i ++) {
-					dataArray.pop();
-				}
-				dataArray.reverse();
-			}
-			dataStartPos = position;
+			nextPosition = -1;
+			skipDataModel = null;
 		}
 		/**
 		 * flvHeaderを設置する。
 		 */
 		public function setFlvHeader(data:ByteArray):void
 		{
+			clear(); // FlvEndがこない状態でFlvHeaderが呼ばれることがあるので、初期化されていないときがある。
 			flvHeader = new ByteArray();
 			flvHeader.writeBytes(data);
 		}
@@ -119,28 +83,34 @@ package com.ttProject.model
 			}
 			return counter == metaCount;
 		}
-		public function setPlayPosition(pos:Number):void {
-			// 開始場所決定
-			dataStartPos = pos;
-			loadingPos = pos;
-		}
 		/**
 		 * flvパケットを設置する。
 		 */
-		public function setFlvData(index:Number, data:ByteArray):void
+		public function setFlvData(index:Number, data:ByteArray):Array
 		{
-			if(index < dataStartPos) {
-				return;
+			if(nextPosition == -1) {
+				nextPosition = index;
 			}
-			var ba:ByteArray = new ByteArray();
-			ba.writeBytes(data);
-			dataArray[index - dataStartPos] = ba;
-			// 再生ポイントを更新する。(本当は連番できているか確認する必要があるが、とりあえずはぶいておく。)
-			if(loadingPos < index) {
-				loadingPos = index;
+			if(index == nextPosition) {
+				nextPosition ++;
+				var result:Array = new Array;
+				if(skipDataModel == null) {
+					result[0] = data;
+				}
+				else {
+					Logger.info("flipがおきました。");
+					skipDataModel.setData(index, data);
+					result = skipDataModel.getData();
+				}
+				return result;
 			}
+			if(skipDataModel == null) {
+				skipDataModel = new SkipDataModel(nextPosition);
+			}
+			skipDataModel.setData(index, data);
+			return null;
 		}
-		
+
 		public function getFlvHeader():ByteArray
 		{
 			return flvHeader;
@@ -152,13 +122,6 @@ package com.ttProject.model
 		public function getMetaData():Array
 		{
 			return metaDataArray;
-		}
-		public function getFlvData(index:Number):ByteArray
-		{
-			if(index < dataStartPos) {
-				return null;
-			}
-			return dataArray[index - dataStartPos] as ByteArray;
 		}
 	}
 }

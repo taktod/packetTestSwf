@@ -108,13 +108,17 @@ package com.ttProject.controller
 			// 特定の指定を受け取った場合に応答を返す・・・
 			switch(order) {
 				case "flvHeader": // flvHeaderを要求する
-					sendFlvHeader(flvModel.getFlvDataModel().getFlvHeader());
+					if(flvModel.isReadyToPlay()) {
+						sendFlvHeader(flvModel.getFlvHeader());
+					}
 					break;
 				case "flvMetaData": // flvMetaDataを要求する
-					var num:int = flvModel.getFlvDataModel().getMetaCount();
-					sendFlvMetaNum(num);
-					for(var i:int = 0;i < num;i ++) {
-						sendFlvMetaData(i, flvModel.getFlvDataModel().getMetaData()[i]);
+					if(flvModel.isReadyToPlay()) {
+						var num:int = flvModel.getFlvMetaNum();
+						sendFlvMetaNum(num);
+						for(var i:int = 0;i < num;i ++) {
+							sendFlvMetaData(i, flvModel.getFlvMetaData(i));
+						}
 					}
 					break;
 				case "flvData": // flvDataを要求する
@@ -127,7 +131,7 @@ package com.ttProject.controller
 					break;
 				case "flvCheck": // 自分が放送を送信できるか要求
 					// 自分が放送を受信している状況か応答する。
-					if(flvModel.getFlvDataModel().isReadyToPlay()) {
+					if(flvModel.isReadyToPlay()) {
 						// ついでに自分のところに複数接続がきている場合はNGにしてやりたい。
 						sendFlvQueue("flvOK");
 					}
